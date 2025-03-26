@@ -1,5 +1,4 @@
 import pygame
-import sys
 
 # all the constants we will use
 ROW_COUNT = 6
