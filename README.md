@@ -18,9 +18,8 @@ pip install numpy
 ```
 
 Make sure to get an API key from the Google AI Studio website:
-```plaintext
+
 https://aistudio.google.com/
-```
 
 Ensure all the files (board.py, ai_agent.py, gemini_agent.py) are all in the same directory
 
