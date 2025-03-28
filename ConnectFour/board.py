@@ -3,7 +3,7 @@ This is the code that implements all the connect 4 code other than the AI agent
 """
 import pygame
 import sys
-import ai_agent  # imports ai_agent.py
+import ai_agent
 
 # constants
 ROW_COUNT = 6
@@ -18,6 +18,7 @@ BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 YELLOW = (255, 255, 0)
 GREY = (128, 128, 128)
+PURPLE = (255, 130, 251)
 
 def create_board():
     board = [[0 for _ in range(COLUMN_COUNT)] for _ in range(ROW_COUNT)]
@@ -60,9 +61,21 @@ def top_bar(screen, current_player):
     rect_background = pygame.Rect(x - 10, y - 5, label_rect.width + 20, label_rect.height + 10)
     pygame.draw.rect(screen, GREY, rect_background)
     screen.blit(restart_label, (x, y))
+
+    # ai suggestion button beside restart button
+    button_font = pygame.font.SysFont("arial", 30)
+    ai_label = button_font.render("Get AI Suggestion", True, PURPLE)
+    ai_rect = ai_label.get_rect()
+    x = WIDTH - ai_rect.width - 150
+    y = (SQUARESIZE - ai_rect.height) // 2
+
+    # grey rectangle behind ai suggestion button
+    ai_background = pygame.Rect(x - 10, y - 5, ai_rect.width + 20, ai_rect.height + 10)
+    pygame.draw.rect(screen, GREY, ai_background)
+    screen.blit(ai_label, (x, y))
     
     pygame.display.update()
-    return rect_background
+    return rect_background, ai_background
 
 # displays the player who won the game, restart button, and exit button
 def winner_label(screen, winning_player):
@@ -122,7 +135,7 @@ def winning_move(board, piece):
                 return True
     return False
 
-# main function for when the game is being played - O(1)
+# main function for when the game is being played
 def main():
     pygame.init()
     screen = pygame.display.set_mode(SIZE)
@@ -131,62 +144,78 @@ def main():
     board = create_board()
     draw_board(board, screen)
     current_player = 1  # player 1 starts
-    restart_button = top_bar(screen, current_player)  # restart button at the top right corner
+    restart_button_rect, ai_suggestion_rect = top_bar(screen, current_player)  # restart and ai suggestion button in the top right corner
+    
     running = True
     game_over = False
-    restart_rect = None  # restart button when game is over
-    exit_rect = None  # exit button when game is over
+    winner_restart_rect = None  # restart button when game is over
+    winner_exit_rect = None  # exit button when game is over
 
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            
-            elif event.type == pygame.MOUSEBUTTONDOWN:
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
                 position_x, position_y = event.pos
 
-                # if you click restart button
-                if restart_button.collidepoint(position_x, position_y):
+                # if you click restart button then game resets
+                if restart_button_rect.collidepoint(position_x, position_y):
                     board = create_board()
                     draw_board(board, screen)
                     current_player = 1
                     game_over = False
-                    restart_button = top_bar(screen, current_player)
+                    restart_button_rect, ai_suggestion_rect = top_bar(screen, current_player)
                     continue
 
-                # if the game is going on
-                if not game_over:
-                    # only allow clicks in the 6x7 grid (not in the top bar)
-                    if position_y >= SQUARESIZE:
-                        column = int(position_x // SQUARESIZE)
-                        # when a player clicks a column, it starts from the bottom row
-                        for row in range (ROW_COUNT - 1, -1, -1):
-                            if board[row][column] == 0:  # if slot is empty (0), place a piece
-                                board[row][column] = current_player
-                                draw_board(board, screen)
+                # if you click the get ai suggestion button it gives the player the best move for their turn
+                if ai_suggestion_rect.collidepoint(position_x, position_y):
+                    if current_player == 1:
+                        column, _ = ai_agent.get_best_move(board, depth = 5, piece = ai_agent.PLAYER_PIECE)  # player 1's turn uses PLAYER_PIECE
+                    else:
+                        column, _ = ai_agent.get_best_move(board, depth = 5, piece = ai_agent.AI_PIECE)  # player 2's turn uses AI_PIECE
 
-                                # if a player gets 4 in a row, the game is over
-                                if winning_move(board, current_player):
-                                    restart_rect, exit_rect = winner_label(screen, current_player)
-                                    game_over = True
+                    # if a non full column is returned then it finds the next open row in that column
+                    if column is not None:
+                        row = ai_agent.get_next_open_row(board, column)
+                        print("AI suggests for player", current_player, "column", column, "row", row)  # print ai suggestion for debugging
+                        circle_x = int(column * SQUARESIZE + SQUARESIZE / 2)
+                        circle_y = int(row * SQUARESIZE + SQUARESIZE + SQUARESIZE / 2)
+                        pygame.draw.circle(screen, PURPLE, (circle_x, circle_y), RADIUS)
+                        pygame.display.update()
+                    continue
+
+                # only allow clicks in the 6x7 grid (not in the top bar)
+                if position_y >= SQUARESIZE:
+                    column = position_x // SQUARESIZE
+                    # when a player clicks a column, it starts from the bottom row
+                    for row in range(ROW_COUNT - 1, -1, -1):
+                        if board[row][column] == 0:  # if slot is empty (0), place a piece
+                            board[row][column] = current_player
+                            draw_board(board, screen)
+
+                            # if a player gets 4 in a row, the game is over
+                            if winning_move(board, current_player):
+                                winner_restart_rect, winner_exit_rect = winner_label(screen, current_player)
+                                game_over = True
+                            else:
+                                if current_player == 1:
+                                    current_player = 2
                                 else:
-                                    if current_player == 1:
-                                        current_player = 2
-                                    else:
-                                        current_player = 1
-                                    restart_button = top_bar(screen, current_player)
-                                break
+                                    current_player = 1
+                                restart_button_rect, ai_suggestion_rect = top_bar(screen, current_player)
+                            break
 
                 # if the game is over, restart and exit buttons are displayed
-                else:
-                    if restart_rect and restart_rect.collidepoint(event.pos):
+                if game_over:
+                    if winner_restart_rect and winner_restart_rect.collidepoint(position_x, position_y):
                         board = create_board()
                         draw_board(board, screen)
                         current_player = 1
-                        restart_button = top_bar(screen, current_player)
+                        restart_button_rect, ai_suggestion_rect = top_bar(screen, current_player)
                         game_over = False
-                        
-                    if exit_rect and exit_rect.collidepoint(event.pos):
+
+                    if winner_exit_rect and winner_exit_rect.collidepoint(position_x, position_y):
                         running = False
 
     pygame.quit()

@@ -133,7 +133,8 @@ def minimax(board, depth, alpha, beta, maximizing_player, piece):
                 value = new_score
                 best_col = col
             alpha = max(alpha, value)
-            if alpha >= beta:
+            if alpha >= beta:  # highlight the pruned branches for better understanding
+                print(f"Pruning branch at depth {depth} for column {col} with alpha = {alpha} and beta = {beta}")
                 break
         return best_col, value
     else:  # Minimizing player
@@ -175,4 +176,3 @@ def get_best_move(board, depth=5, piece=AI_PIECE):
     # If no immediate win/block, use minimax
     col, _ = minimax(board, depth, -math.inf, math.inf, True, piece)
     return col, PURPLE
-
