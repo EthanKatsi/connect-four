@@ -1,5 +1,5 @@
 """
-This is the code that implements the AI agent to predict the next best move per each turn
+This is the code that implements the AI agent to predict the next best move per each turn using the minimax algorithm with alpha-beta pruning
 """
 import numpy as np
 import random

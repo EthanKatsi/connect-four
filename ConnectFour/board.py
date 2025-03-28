@@ -4,6 +4,7 @@ This is the code that implements all the connect 4 code other than the AI agent
 import pygame
 import sys
 import ai_agent
+import gemini_agent
 
 # constants
 ROW_COUNT = 6
@@ -40,9 +41,9 @@ def draw_board(board, screen):
     pygame.display.update()
 
 # bar at the top of the screen showing player turn and restart button
-def top_bar(screen, current_player):
+def top_bar(screen, current_player, selected_ai):
     # displays whos turn it is in the top left corner
-    font = pygame.font.SysFont("arial", 42)
+    font = pygame.font.SysFont("arial", 36)
     if current_player == 1:
         label = font.render("Player 1's Turn", True, RED)
     else:
@@ -63,23 +64,28 @@ def top_bar(screen, current_player):
     screen.blit(restart_label, (x, y))
 
     # ai suggestion button beside restart button
-    button_font = pygame.font.SysFont("arial", 30)
-    ai_label = button_font.render("Get AI Suggestion", True, PURPLE)
+    ai_label = button_font.render("| Get AI Suggestion", True, PURPLE)
     ai_rect = ai_label.get_rect()
-    x = WIDTH - ai_rect.width - 150
-    y = (SQUARESIZE - ai_rect.height) // 2
+    x_ai = WIDTH - ai_rect.width - 125
+    y_ai = (SQUARESIZE - ai_rect.height) // 2
+    ai_bg = pygame.Rect(x_ai - 10, y_ai - 5, ai_rect.width + 20, ai_rect.height + 10)
+    pygame.draw.rect(screen, GREY, ai_bg)
+    screen.blit(ai_label, (x_ai, y_ai))
 
-    # grey rectangle behind ai suggestion button
-    ai_background = pygame.Rect(x - 10, y - 5, ai_rect.width + 20, ai_rect.height + 10)
-    pygame.draw.rect(screen, GREY, ai_background)
-    screen.blit(ai_label, (x, y))
+    # button to change which ai you use (minimax or gemini) - click the button to change which ai you are using
+    ai_select_label = button_font.render(selected_ai, True, PURPLE)
+    ai_select_rect = ai_select_label.get_rect()
+    x_select = WIDTH - ai_rect.width - 110 - ai_select_rect.width - 30
+    y_select = (SQUARESIZE - ai_select_rect.height) // 2
+    ai_select_bg = pygame.Rect(x_select - 10, y_select - 5, ai_select_rect.width + 20, ai_select_rect.height + 10)
+    pygame.draw.rect(screen, GREY, ai_select_bg)
+    screen.blit(ai_select_label, (x_select, y_select))
     
     pygame.display.update()
-    return rect_background, ai_background
+    return rect_background, ai_bg, ai_select_bg
 
 # displays the player who won the game, restart button, and exit button
 def winner_label(screen, winning_player):
-    # displays who won the game
     font = pygame.font.SysFont("arial", 60)
     if winning_player == 1:
         label = font.render("Player 1 wins!", True, RED)
@@ -144,8 +150,8 @@ def main():
     board = create_board()
     draw_board(board, screen)
     current_player = 1  # player 1 starts
-    restart_button_rect, ai_suggestion_rect = top_bar(screen, current_player)  # restart and ai suggestion button in the top right corner
-    
+    selected_ai = "Minimax"  # default ai selected
+    restart_button_rect, ai_suggestion_rect, ai_select_rect = top_bar(screen, current_player, selected_ai)  # restart and ai suggestion buttons in the top right corner
     running = True
     game_over = False
     winner_restart_rect = None  # restart button when game is over
@@ -165,25 +171,41 @@ def main():
                     draw_board(board, screen)
                     current_player = 1
                     game_over = False
-                    restart_button_rect, ai_suggestion_rect = top_bar(screen, current_player)
+                    restart_button_rect, ai_suggestion_rect, ai_select_rect = top_bar(screen, current_player, selected_ai)
                     continue
 
-                # if you click the get ai suggestion button it gives the player the best move for their turn
-                if ai_suggestion_rect.collidepoint(position_x, position_y):
-                    if current_player == 1:
-                        column, _ = ai_agent.get_best_move(board, depth = 5, piece = ai_agent.PLAYER_PIECE)  # player 1's turn uses PLAYER_PIECE
+                if ai_select_rect.collidepoint(position_x, position_y):
+                    if selected_ai == "Minimax":
+                        selected_ai = "Gemini"
                     else:
-                        column, _ = ai_agent.get_best_move(board, depth = 5, piece = ai_agent.AI_PIECE)  # player 2's turn uses AI_PIECE
+                        selected_ai = "Minimax"
+                    restart_button_rect, ai_suggestion_rect, ai_select_rect = top_bar(screen, current_player, selected_ai)
+                    continue
+
+                # if you click the get ai suggestion button it gives you 2 ai options: minimax and gemini
+                if ai_suggestion_rect.collidepoint(position_x, position_y):
+                    if selected_ai == "Minimax":
+                        if current_player == 1:
+                            column, _ = ai_agent.get_best_move(board, depth = 5, piece = ai_agent.PLAYER_PIECE)  # player 1's turn uses PLAYER_PIECE
+                        else:
+                            column, _ = ai_agent.get_best_move(board, depth = 5, piece = ai_agent.AI_PIECE)  # player 2's turn uses AI_PIECE
+                    
+                    else:
+                        column = gemini_agent.get_gemini_move(board)
 
                     # if a non full column is returned then it finds the next open row in that column
                     if column is not None:
                         row = ai_agent.get_next_open_row(board, column)
-                        print("AI suggests for player", current_player, "column", column, "row", row)  # print ai suggestion for debugging
-                        circle_x = int(column * SQUARESIZE + SQUARESIZE / 2)
-                        circle_y = int(row * SQUARESIZE + SQUARESIZE + SQUARESIZE / 2)
-                        pygame.draw.circle(screen, PURPLE, (circle_x, circle_y), RADIUS)
-                        pygame.display.update()
-                    continue
+                        
+                        if row is not None:
+                            print("AI suggests for player", current_player, "column", column, "row", row)  # print ai suggestion for debugging
+                            circle_x = column * SQUARESIZE + SQUARESIZE / 2
+                            circle_y = row * SQUARESIZE + SQUARESIZE + SQUARESIZE / 2
+                            pygame.draw.circle(screen, PURPLE, (circle_x, circle_y), RADIUS)
+                            pygame.display.update()
+                        # if the row that the ai generatess is none, skips the ai generation (for the gemini ai)
+                        else:
+                            print("Suggested column", column, "is full. No open row available.")
 
                 # only allow clicks in the 6x7 grid (not in the top bar)
                 if position_y >= SQUARESIZE:
@@ -203,7 +225,7 @@ def main():
                                     current_player = 2
                                 else:
                                     current_player = 1
-                                restart_button_rect, ai_suggestion_rect = top_bar(screen, current_player)
+                                restart_button_rect, ai_suggestion_rect, ai_select_rect = top_bar(screen, current_player, selected_ai)
                             break
 
                 # if the game is over, restart and exit buttons are displayed
@@ -212,7 +234,7 @@ def main():
                         board = create_board()
                         draw_board(board, screen)
                         current_player = 1
-                        restart_button_rect, ai_suggestion_rect = top_bar(screen, current_player)
+                        restart_button_rect, ai_suggestion_rect, ai_select_rect = top_bar(screen, current_player, selected_ai)
                         game_over = False
 
                     if winner_exit_rect and winner_exit_rect.collidepoint(position_x, position_y):
