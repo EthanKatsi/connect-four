@@ -1,12 +1,12 @@
 # AI Connect 4
-We created a 2 player turn based Connect 4 game with an AI agent telling you the next best move using python and pygame.
+We created a 2 player turn based Connect 4 game with an AI agent (either Minimax with alpha-beta pruning or the Gemini AI api) telling you the next best move using python and pygame.
 
 ## How to run
 Install pygame:
 ```pip install pygame```
 
 Install Gemini AI:
-```pip install google-genai```
+``pip install google-genai``
 
 Make sure to get an API key from the Google AI Studio website: https://aistudio.google.com/
 
