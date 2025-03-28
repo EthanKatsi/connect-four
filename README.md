@@ -2,7 +2,7 @@
 We created a 2 player turn based Connect 4 game with an AI agent (either Minimax with alpha-beta pruning or the Gemini AI api) telling you the next best move using python and pygame.
 
 ## How to run
-Install pygame:
+Install the pygame library:
 ```plaintext
 pip install pygame
 ```
