@@ -12,11 +12,6 @@ Install Gemini AI:
 pip install google-genai
 ```
 
-Install the numpy library:
-```plaintext
-pip install numpy
-```
-
 Make sure to get an API key from the Google AI Studio website:
 
 https://aistudio.google.com/
