@@ -19,3 +19,5 @@ https://aistudio.google.com/
 Ensure all the files (```board.py```, ```ai_agent.py```, ```gemini_agent.py```) are all in the same directory
 
 Run ```board.py``` in the terminal
+
+## Features
