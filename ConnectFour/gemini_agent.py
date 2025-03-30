@@ -4,7 +4,7 @@ This is the code that implements the AI agent to predict the next best move per 
 from google import genai
 from google.genai import types
 
-API_KEY = "AIzaSyCozuD6q9Q2uyAKlMi3f9fWN7v_0wataZY"
+API_KEY = ""  # GET API KEY FROM WEBSITE
 MODEL = "gemini-2.0-flash"
 
 # converts the board in board.py to a string so the gemini ai can read it well
