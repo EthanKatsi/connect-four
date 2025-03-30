@@ -1,12 +1,10 @@
 """
 This is the code that implements the AI agent to predict the next best move per each turn using the Gemini AI api
 """
-import base64
-import os
 from google import genai
 from google.genai import types
 
-API_KEY = ""  # COPY FROM THE CP468 GROUP CHAT
+API_KEY = "AIzaSyCozuD6q9Q2uyAKlMi3f9fWN7v_0wataZY"
 MODEL = "gemini-2.0-flash"
 
 # converts the board in board.py to a string so the gemini ai can read it well
@@ -22,23 +20,24 @@ def board_to_string(board):
 def get_gemini_move(board):
     client = genai.Client(api_key = API_KEY)
     board_str = board_to_string(board)
+    rows = len(board)
+    columns = len(board[0])
     prompt = (
-        "You are a Connect 4 expert. "
-        "Given the current board state below, "
-        "please return only the best column number (0-indexed) to drop the next piece. "
+        f"You are a Connect 4 expert. The board is a grid with {rows} rows and {columns} columns. "
+        "Given the current board state below, please return only the best column number (0-indexed) to drop the next piece. "
         "Do not include any extra text.\n\n"
         f"{board_str}"
     )
     
     contents = [
         types.Content(
-            role="user",
-            parts=[types.Part.from_text(text = prompt)]
+            role = "user",
+            parts = [types.Part.from_text(text = prompt)]
         )
     ]
     
     generate_content_config = types.GenerateContentConfig(
-        response_mime_type="text/plain",
+        response_mime_type = "text/plain",
     )
 
     # gets the answer the ai generates as a text
