@@ -4,6 +4,7 @@ This is the code that implements all the connect 4 code other than the AI agent
 import pygame
 import sys
 import ai_agent
+import ai_agent_minimax_only
 import gemini_agent
 
 # default slider ranges
@@ -14,6 +15,7 @@ DEFAULT_COLUMNS = 7
 SQUARESIZE = 100
 
 # constants
+AI_AGENT = ai_agent # change to ai_agent or ai_agent_minimax_only to alternate between pruning and no pruning
 ROW_COUNT = DEFAULT_ROWS
 COLUMN_COUNT = DEFAULT_COLUMNS
 SQUARESIZE = 100
@@ -239,16 +241,16 @@ def main():
                 if ai_suggestion_rect.collidepoint(position_x, position_y):
                     if selected_ai == "Minimax":
                         if current_player == 1:
-                            column, _ = ai_agent.get_best_move(board, depth = 5, piece = ai_agent.PLAYER_PIECE)  # player 1's turn uses PLAYER_PIECE
+                            column, _ = AI_AGENT.get_best_move(board, depth = 5, piece = AI_AGENT.PLAYER_PIECE)  # player 1's turn uses PLAYER_PIECE
                         else:
-                            column, _ = ai_agent.get_best_move(board, depth = 5, piece = ai_agent.AI_PIECE)  # player 2's turn uses AI_PIECE
+                            column, _ = AI_AGENT.get_best_move(board, depth = 5, piece = AI_AGENT.AI_PIECE)  # player 2's turn uses AI_PIECE
                     
                     else:
                         column = gemini_agent.get_gemini_move(board)
 
                     # if a non full column is returned then it finds the next open row in that column
                     if column is not None:
-                        row = ai_agent.get_next_open_row(board, column)
+                        row = AI_AGENT.get_next_open_row(board, column)
                         
                         if row is not None:
                             print("AI suggests for player", current_player, "column", column, "row", row)  # print ai suggestion for debugging
@@ -256,7 +258,7 @@ def main():
                             circle_y = row * SQUARESIZE + SQUARESIZE + SQUARESIZE / 2
                             pygame.draw.circle(screen, PURPLE, (circle_x, circle_y), RADIUS)
                             pygame.display.update()
-                        # if the row that the ai generatess is none, skips the ai generation (for the gemini ai)
+                        # if the row is full, skips the ai generation (for the gemini ai)
                         else:
                             print("Suggested column", column, "is full. No open row available.")
 
