@@ -139,7 +139,7 @@ def minimax(board, depth, alpha, beta, maximizing_player, piece):
                 best_col = col
             alpha = max(alpha, value)
             if alpha >= beta:  # highlight the pruned branches for better understanding
-                # print(f"Pruning branch at depth {depth} for column {col} with alpha = {alpha} and beta = {beta}")
+                print(f"Pruning branch at depth {depth} for column {col} with alpha = {alpha} and beta = {beta}")
                 break
         return best_col, value
     else:  # Minimizing player
