@@ -21,3 +21,7 @@ Ensure all the files (```board.py```, ```ai_agent.py```, ```gemini_agent.py```) 
 Run ```board.py``` in the terminal
 
 ## Features
+
+- First item
+- Second item
+- Third item
