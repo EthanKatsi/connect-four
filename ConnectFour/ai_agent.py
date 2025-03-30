@@ -108,7 +108,11 @@ def score_position(board, piece):
 
 def minimax(board, depth, alpha, beta, maximizing_player, piece):
     COLUMN_COUNT = len(board[0])
-
+    
+    # Initialize pruning counter if it doesn't exist
+    if not hasattr(minimax, 'prune_count'):
+        minimax.prune_count = 0
+    
     valid_locations = get_valid_locations(board)
     is_terminal = len(valid_locations) == 0 or winning_move(board, PLAYER_PIECE) or winning_move(board, AI_PIECE)
     
@@ -122,7 +126,7 @@ def minimax(board, depth, alpha, beta, maximizing_player, piece):
                 return (None, 0)
         else:  # Depth is zero
             return (None, score_position(board, piece))
-    
+
     # Order moves by center preference for better pruning
     valid_locations.sort(key=lambda x: abs(x - COLUMN_COUNT//2))
     
@@ -138,8 +142,9 @@ def minimax(board, depth, alpha, beta, maximizing_player, piece):
                 value = new_score
                 best_col = col
             alpha = max(alpha, value)
-            if alpha >= beta:  # highlight the pruned branches for better understanding
-                print(f"Pruning branch at depth {depth} for column {col} with alpha = {alpha} and beta = {beta}")
+            if alpha >= beta: # highlight the pruned branches for better understanding
+                minimax.prune_count += 1
+                print(f"Pruned branch (Total prunes: {minimax.prune_count}) | Depth: {depth}, Column: {col}, α: {alpha}, β: {beta}")
                 break
         return best_col, value
     else:  # Minimizing player
@@ -148,13 +153,15 @@ def minimax(board, depth, alpha, beta, maximizing_player, piece):
         for col in valid_locations:
             row = get_next_open_row(board, col)
             temp_board = [row[:] for row in board]
-            drop_piece(temp_board, row, col, PLAYER_PIECE if piece == AI_PIECE else AI_PIECE)
+            drop_piece(temp_board, row, col, piece)
             new_score = minimax(temp_board, depth-1, alpha, beta, True, piece)[1]
             if new_score < value:
                 value = new_score
                 best_col = col
             beta = min(beta, value)
             if alpha >= beta:
+                minimax.prune_count += 1
+                print(f"Pruned branch (Total prunes: {minimax.prune_count}) | Depth: {depth}, Column: {col}, α: {alpha}, β: {beta}")
                 break
         return best_col, value
 
