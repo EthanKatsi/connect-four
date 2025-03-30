@@ -21,6 +21,7 @@ Ensure all the files (```board.py```, ```ai_agent.py```, ```gemini_agent.py```) 
 Run ```board.py``` in the terminal
 
 ## Features
-- First item
-- Second item
-- Third item
+- You can choose the grid size before the game starts
+- You can alternate between the minimax and gemini AI's by clicking "Minimax" at the top
+- Click "Get AI Suggestion" to get the AI's suggestion on the best move you should make
+- You can reset the game if you click the "Restart" button in the top right corner
