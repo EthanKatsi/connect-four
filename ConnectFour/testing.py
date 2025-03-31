@@ -1,3 +1,6 @@
+"""
+This module tests the performance of different AI agents in a Connect Four game.
+"""
 import time
 import random
 import copy
@@ -9,6 +12,7 @@ import sys
 # Import the AI agents
 import ai_agent
 import ai_agent_minimax_only
+import gemini_agent
 
 # Constants
 EMPTY = 0
@@ -29,10 +33,11 @@ class AgentTester:
         self.num_games = num_games
         self.max_depth = max_depth
         
-        # Initialize agents - only Minimax and Alpha-Beta.
+        # Initialize agents - Alpha-Beta, Minimax, and Gemini.
         self.agents = {
             "Alpha-Beta": self._alpha_beta_move,
-            "Minimax": self._minimax_move
+            "Minimax": self._minimax_move,
+            "Gemini": self._gemini_move
         }
         
         # Metrics storage
@@ -109,7 +114,6 @@ class AgentTester:
         """Get move using Alpha-Beta agent and measure performance."""
         start_time = time.time()
         
-        # Reset counters for a fair measurement.
         if hasattr(ai_agent.minimax, 'prune_count'):
             ai_agent.minimax.prune_count = 0
         
@@ -144,6 +148,21 @@ class AgentTester:
         self.metrics["execution_time"]["Minimax"].append(execution_time)
         self.metrics["nodes_evaluated"]["Minimax"].append(call_count)
         
+        return col
+
+    def _gemini_move(self, board, piece):
+        """
+        Get move using Gemini AI API.
+        The 'piece' parameter is ignored since Gemini uses the board state only.
+        """
+        start_time = time.time()
+        col = gemini_agent.get_gemini_move(board)
+        end_time = time.time()
+        execution_time = end_time - start_time
+        self.metrics["execution_time"]["Gemini"].append(execution_time)
+        # Gemini does not provide node count or pruning efficiency.
+        self.metrics["nodes_evaluated"]["Gemini"].append(0)
+        self.metrics["pruning_efficiency"]["Gemini"] = 0
         return col
 
     def run_game(self, agent1, agent2, rows, cols, starting_player, agent1_piece, agent2_piece):
@@ -193,7 +212,10 @@ class AgentTester:
                 return 3 - current_player
 
     def run_tournament(self):
-        """Run a tournament between all agents for all board sizes using alternating starting players and piece assignments."""
+        """
+        Run a tournament between all agents for all board sizes using alternating starting players and piece assignments.
+        This will now include Gemini in addition to Alpha-Beta and Minimax.
+        """
         agent_names = list(self.agents.keys())
         results = {}
         
@@ -295,7 +317,7 @@ class AgentTester:
         agent_names = list(metrics_summary.keys())
         
         fig, axs = plt.subplots(2, 2, figsize=(12, 10))
-        fig.suptitle('Minimax vs Alpha-Beta Performance Comparison', fontsize=16)
+        fig.suptitle('Minimax vs Alpha-Beta vs Gemini Performance Comparison', fontsize=16)
         
         win_percentages = [metrics_summary[agent]["win_percentage"] for agent in agent_names]
         axs[0, 0].bar(agent_names, win_percentages)
@@ -324,7 +346,7 @@ class AgentTester:
 def run_simulation():
     """Run the full simulation with interactive configuration."""
     board_sizes = [(6, 7)]
-    num_games = 5
+    num_games = 1
     max_depth = 5
     
     if len(sys.argv) > 1:
