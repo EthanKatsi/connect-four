@@ -8,220 +8,170 @@ import ai_agent_minimax_only
 import gemini_agent
 
 # default slider ranges
-MIN_SIZE = 4
-MAX_SIZE = 10
-DEFAULT_ROWS = 6
-DEFAULT_COLUMNS = 7
-SQUARESIZE = 100
+default_rows = 6
+default_columns = 7
+squaresize = 80
+top_bar_height = 120
 
 # constants
-AI_AGENT = ai_agent # change to ai_agent or ai_agent_minimax_only to alternate between pruning and no pruning
-ROW_COUNT = DEFAULT_ROWS
-COLUMN_COUNT = DEFAULT_COLUMNS
-SQUARESIZE = 100
-WIDTH = COLUMN_COUNT * SQUARESIZE
-HEIGHT = (ROW_COUNT + 1) * SQUARESIZE
-SIZE = (WIDTH, HEIGHT)
-RADIUS = int(SQUARESIZE / 2 - 5)
-BLUE = (0, 0, 255)
-BLACK = (0, 0, 0)
-RED = (255, 0, 0)
-YELLOW = (255, 255, 0)
-GREY = (128, 128, 128)
-PURPLE = (255, 130, 251)
+row_count = default_rows
+column_count = default_columns
+width = column_count * squaresize
+height = top_bar_height + row_count * squaresize
+size = (width, height)
+radius = int(squaresize / 2 - 5)
+blue = (0, 0, 255)
+black = (0, 0, 0)
+red = (255, 0, 0)
+yellow = (255, 255, 0)
+grey = (128, 128, 128)
+purple = (255, 130, 251)
+
+selected_ai = "Alpha-Beta"
+ai_map = {
+    "Alpha-Beta": ai_agent,
+    "Minimax": ai_agent_minimax_only,
+    "Gemini": gemini_agent
+}
 
 # before the game starts, asks the user what size grid they would like to use
 def choose_grid_size():
-    VALID_GRID_SIZES = [(4, 5), (5, 6), (6, 7), (7, 8), (8, 9), (9, 10)]
-    current_index = 2  # default grid size is 6, 7 (2nd index)
-
-    selection_width, selection_height = 700, 500
-    screen = pygame.display.set_mode((selection_width, selection_height))
+    valid_grid_sizes = [(4, 5), (5, 6), (6, 7), (7, 8), (8, 9), (9, 10)]
+    current_index = 2 # default grid size is 6, 7 (2nd index)
+    screen = pygame.display.set_mode((700, 500))
     pygame.display.set_caption("Choose Grid Size")
-    
     font = pygame.font.SysFont("arial", 32)
-    done = False
 
-    while not done:
+    while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFT:
-                    current_index = (current_index - 1) % len(VALID_GRID_SIZES)
+                    current_index = (current_index - 1) % len(valid_grid_sizes)
                 elif event.key == pygame.K_RIGHT:
-                    current_index = (current_index + 1) % len(VALID_GRID_SIZES)
+                    current_index = (current_index + 1) % len(valid_grid_sizes)
                 elif event.key == pygame.K_RETURN:
-                    done = True
+                    return valid_grid_sizes[current_index]
 
-        rows, columns = VALID_GRID_SIZES[current_index]
-        screen.fill(BLACK)
-        size_text = font.render(f"Grid Size: {rows} x {columns}", True, YELLOW)
-        instruction_text = font.render("Use LEFT/RIGHT arrow keys to choose, ENTER to start", True, PURPLE)
-        screen.blit(size_text, (50, 100))
-        screen.blit(instruction_text, (20, 150))
+        rows, cols = valid_grid_sizes[current_index]
+        screen.fill(black)
+        screen.blit(font.render(f"Grid Size: {rows} x {cols}", True, yellow), (50, 100))
+        screen.blit(font.render("Use LEFT/RIGHT arrows to choose, ENTER to start", True, purple), (20, 150))
         pygame.display.update()
-    
-    return rows, columns
 
 def create_board():
-    board = [[0 for _ in range(COLUMN_COUNT)] for _ in range(ROW_COUNT)]
-    return board
+    return [[0 for _ in range(column_count)] for _ in range(row_count)]
 
 # draws the connect 4 board - O(m*n)
 def draw_board(board, screen):
-    for c in range(COLUMN_COUNT):
-        for r in range(ROW_COUNT):
-            pygame.draw.rect(screen, BLUE, (c * SQUARESIZE, r * SQUARESIZE + SQUARESIZE, SQUARESIZE, SQUARESIZE))
-            if board[r][c] == 0:
-                color = BLACK
-            elif board[r][c] == 1:
-                color = RED
-            elif board[r][c] == 2:
-                color = YELLOW
-
-            pygame.draw.circle(screen, color, (int(c * SQUARESIZE + SQUARESIZE / 2), int(r * SQUARESIZE + SQUARESIZE + SQUARESIZE / 2)), RADIUS)
+    for c in range(column_count):
+        for r in range(row_count):
+            pygame.draw.rect(screen, blue, (c * squaresize, r * squaresize + top_bar_height, squaresize, squaresize))
+            color = black if board[r][c] == 0 else red if board[r][c] == 1 else yellow
+            pygame.draw.circle(screen, color, (int(c * squaresize + squaresize / 2), int(r * squaresize + top_bar_height + squaresize / 2)), radius)
     pygame.display.update()
 
 # bar at the top of the screen showing player turn and restart button
 def top_bar(screen, current_player, selected_ai):
+    pygame.draw.rect(screen, black, (0, 0, width, top_bar_height))
+ 
     # displays whos turn it is in the top left corner
     font = pygame.font.SysFont("arial", 36)
-    if current_player == 1:
-        label = font.render("Player 1's Turn", True, RED)
-    else:
-        label = font.render("Player 2's Turn", True, YELLOW)
-    pygame.draw.rect(screen, BLACK, (0, 0, WIDTH, SQUARESIZE))
-    screen.blit(label, (40, 10))
+    player_label = font.render(f"Player {current_player}'s Turn", True, red if current_player == 1 else yellow)
+    label_rect = player_label.get_rect(center=(width // 2, 30))
+    screen.blit(player_label, label_rect)
 
-    # restart button in the top right corner
-    button_font = pygame.font.SysFont("arial", 30)
-    restart_label = button_font.render("Restart", True, YELLOW)
-    label_rect = restart_label.get_rect()
-    x = WIDTH - label_rect.width - 20
-    y = (SQUARESIZE - label_rect.height) // 2
-
-    # grey rectangle behind restart button
-    rect_background = pygame.Rect(x - 10, y - 5, label_rect.width + 20, label_rect.height + 10)
-    pygame.draw.rect(screen, GREY, rect_background)
-    screen.blit(restart_label, (x, y))
-
-    # ai suggestion button beside restart button
-    ai_label = button_font.render("| Get AI Suggestion", True, PURPLE)
-    ai_rect = ai_label.get_rect()
-    x_ai = WIDTH - ai_rect.width - 125
-    y_ai = (SQUARESIZE - ai_rect.height) // 2
-    ai_bg = pygame.Rect(x_ai - 10, y_ai - 5, ai_rect.width + 20, ai_rect.height + 10)
-    pygame.draw.rect(screen, GREY, ai_bg)
-    screen.blit(ai_label, (x_ai, y_ai))
-
-    # button to change which ai you use (minimax or gemini) - click the button to change which ai you are using
-    ai_select_label = button_font.render(selected_ai, True, PURPLE)
-    ai_select_rect = ai_select_label.get_rect()
-    x_select = WIDTH - ai_rect.width - 110 - ai_select_rect.width - 30
-    y_select = (SQUARESIZE - ai_select_rect.height) // 2
-    ai_select_bg = pygame.Rect(x_select - 10, y_select - 5, ai_select_rect.width + 20, ai_select_rect.height + 10)
-    pygame.draw.rect(screen, GREY, ai_select_bg)
-    screen.blit(ai_select_label, (x_select, y_select))
+     # ai suggestion button beside restart button
+    button_font = pygame.font.SysFont("arial", 22)
     
+     # button to change which ai you use (minimax, Alphha-Beta or gemini) - click the button to change which ai you are using
+    ai_select_label = button_font.render(selected_ai, True, purple)
+    ai_label = button_font.render("Get AI Suggestion", True, purple)
+   
+    restart_label = button_font.render("Restart", True, yellow)
+
+    #calculates positions and draw buttons with grey backgrounds
+    total_width = ai_select_label.get_width() + ai_label.get_width() + restart_label.get_width() + 80
+    start_x = (width - total_width) // 2
+    y = top_bar_height - restart_label.get_height() - 20
+
+    ai_select_bg = pygame.Rect(start_x - 10, y - 5, ai_select_label.get_width() + 20, ai_select_label.get_height() + 10)
+    pygame.draw.rect(screen, grey, ai_select_bg)
+    screen.blit(ai_select_label, (start_x, y))
+
+
+    ai_x = start_x + ai_select_label.get_width() + 30
+    ai_bg = pygame.Rect(ai_x - 10, y - 5, ai_label.get_width() + 20, ai_label.get_height() + 10)
+    pygame.draw.rect(screen, grey, ai_bg)
+    screen.blit(ai_label, (ai_x, y))
+
+
+    restart_x = ai_x + ai_label.get_width() + 30
+    restart_bg = pygame.Rect(restart_x - 10, y - 5, restart_label.get_width() + 20, restart_label.get_height() + 10)
+    pygame.draw.rect(screen, grey, restart_bg)     # grey rectangle behind restart button
+    screen.blit(restart_label, (restart_x, y))
+
     pygame.display.update()
-    return rect_background, ai_bg, ai_select_bg
+    return restart_bg, ai_bg, ai_select_bg
 
 # displays the player who won the game, restart button, and exit button
-def winner_label(screen, winning_player):
-    font = pygame.font.SysFont("arial", 60)
-    if winning_player == 1:
-        label = font.render("Player 1 wins!", True, RED)
-    else:
-        label = font.render("Player 2 wins!", True, YELLOW)
-
-    # grey background so text is easier to read
-    text_rect = label.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 40))
-    text_bg_rect = text_rect.inflate(20, 20)
-    pygame.draw.rect(screen, BLACK, text_bg_rect)
-    screen.blit(label, text_rect)
-
-    # restart button + background
-    button_font = pygame.font.SysFont("arial", 40)
-    restart_label = button_font.render("Restart", True, YELLOW)
-    restart_rect = restart_label.get_rect(center=(WIDTH // 2, text_rect.bottom + 50))
-    pygame.draw.rect(screen, GREY, restart_rect.inflate(20, 10))
-    screen.blit(restart_label, restart_rect)
-
-    # exit button + background
-    exit_label = button_font.render("Exit Game", True, RED)
-    exit_rect = exit_label.get_rect(center=(WIDTH // 2, text_rect.bottom + 120))
-    pygame.draw.rect(screen, GREY, exit_rect.inflate(20, 10))
-    screen.blit(exit_label, exit_rect)
-
-    pygame.display.update()
-    return restart_rect, exit_rect
-
-# if a player gets 4 in a row they win the game - O(m*n)
 def winning_move(board, piece):
-    # 4 in a row horizontally
-    for r in range(ROW_COUNT):
-        for c in range(COLUMN_COUNT - 3):
-            if board[r][c] == piece and board[r][c + 1] == piece and board[r][c + 2] == piece and board[r][c + 3] == piece:
+    for r in range(row_count):
+        for c in range(column_count - 3):
+            if all(board[r][c + i] == piece for i in range(4)):
                 return True
-
-    # 4 in a row vertically
-    for c in range(COLUMN_COUNT):
-        for r in range(ROW_COUNT - 3):
-            if board[r][c] == piece and board[r + 1][c] == piece and board[r + 2][c] == piece and board[r + 3][c] == piece:
+    for c in range(column_count):
+        for r in range(row_count - 3):
+            if all(board[r + i][c] == piece for i in range(4)):
                 return True
-
-    # 4 in a row diagonally from bottom
-    for r in range(ROW_COUNT - 3):
-        for c in range(COLUMN_COUNT - 3):
-            if board[r][c] == piece and board[r + 1][c + 1] == piece and board[r + 2][c + 2] == piece and board[r + 3][c + 3] == piece:
+    for r in range(row_count - 3):
+        for c in range(column_count - 3):
+            if all(board[r + i][c + i] == piece for i in range(4)):
                 return True
-
-    # 4 in a row diagonally from top
-    for r in range(3, ROW_COUNT):
-        for c in range(COLUMN_COUNT - 3):
-            if board[r][c] == piece and board[r - 1][c + 1] == piece and board[r - 2][c + 2] == piece and board[r - 3][c + 3] == piece:
+    for r in range(3, row_count):
+        for c in range(column_count - 3):
+            if all(board[r - i][c + i] == piece for i in range(4)):
                 return True
     return False
 
-# main function for when the game is being played
 def main():
+    global row_count, column_count, width, height, size, radius, selected_ai
     pygame.init()
+    
+    #choose grid size and calculate window dimensions and piece radius
+    row_count, column_count = choose_grid_size()
+    width, height = column_count * squaresize, top_bar_height + row_count * squaresize
+    size = (width, height)
+    radius = int(squaresize / 2 - 5)
 
-    # before game starts, user chooses the grid size
-    rows, columns = choose_grid_size()
-    global ROW_COUNT, COLUMN_COUNT, WIDTH, HEIGHT, SIZE, RADIUS
-    ROW_COUNT = rows
-    COLUMN_COUNT = columns
-    WIDTH = COLUMN_COUNT * SQUARESIZE
-    HEIGHT = (ROW_COUNT + 1) * SQUARESIZE
-    SIZE = (WIDTH, HEIGHT)
-    RADIUS = int(SQUARESIZE / 2 - 5)
-
-    screen = pygame.display.set_mode(SIZE)
+    # sets up the display window and title
+    screen = pygame.display.set_mode(size)
     pygame.display.set_caption("Connect 4")
 
+    # creates and draws the initial game board
     board = create_board()
     draw_board(board, screen)
-    current_player = 1  # player 1 starts
-    selected_ai = "Minimax"  # default ai selected
-    restart_button_rect, ai_suggestion_rect, ai_select_rect = top_bar(screen, current_player, selected_ai)  # restart and ai suggestion buttons in the top right corner
-    running = True
+    current_player = 1
+
+    # draws the top control bar (restart, AI suggestion, AI select buttons)
+    restart_button_rect, ai_suggestion_rect, ai_select_rect = top_bar(screen, current_player, selected_ai)
     game_over = False
-    winner_restart_rect = None  # restart button when game is over
-    winner_exit_rect = None  # exit button when game is over
 
-    while running:
+    while True:
         for event in pygame.event.get():
+            # handles quitting the game
             if event.type == pygame.QUIT:
-                running = False
+                pygame.quit()
+                sys.exit()
 
+            # handles mouse click events
             if event.type == pygame.MOUSEBUTTONDOWN:
-                position_x, position_y = event.pos
+                x, y = event.pos
 
-                # if you click restart button then game resets
-                if restart_button_rect.collidepoint(position_x, position_y):
+                # resets the board and game state
+                if restart_button_rect.collidepoint(x, y):
                     board = create_board()
                     draw_board(board, screen)
                     current_player = 1
@@ -229,74 +179,61 @@ def main():
                     restart_button_rect, ai_suggestion_rect, ai_select_rect = top_bar(screen, current_player, selected_ai)
                     continue
 
-                if ai_select_rect.collidepoint(position_x, position_y):
-                    if selected_ai == "Minimax":
-                        selected_ai = "Gemini"
-                    else:
-                        selected_ai = "Minimax"
+                # toggles the selected AI algorithm
+                if ai_select_rect.collidepoint(x, y):
+                    selected_ai = ("Minimax" if selected_ai == "Alpha-Beta" else "Gemini" if selected_ai == "Minimax" else "Alpha-Beta")
                     restart_button_rect, ai_suggestion_rect, ai_select_rect = top_bar(screen, current_player, selected_ai)
                     continue
 
-                # if you click the get ai suggestion button it gives you 2 ai options: minimax and gemini
-                if ai_suggestion_rect.collidepoint(position_x, position_y):
-                    if selected_ai == "Minimax":
-                        if current_player == 1:
-                            column, _ = AI_AGENT.get_best_move(board, depth = 5, piece = AI_AGENT.PLAYER_PIECE)  # player 1's turn uses PLAYER_PIECE
-                        else:
-                            column, _ = AI_AGENT.get_best_move(board, depth = 5, piece = AI_AGENT.AI_PIECE)  # player 2's turn uses AI_PIECE
-                    
+                # displays the AI’s recommended move
+                if ai_suggestion_rect.collidepoint(x, y):
+                    agent = ai_map[selected_ai]
+                    if selected_ai == "Gemini":
+                        col = agent.get_gemini_move(board)
                     else:
-                        column = gemini_agent.get_gemini_move(board)
-
-                    # if a non full column is returned then it finds the next open row in that column
-                    if column is not None:
-                        row = AI_AGENT.get_next_open_row(board, column)
-                        
+                        piece = agent.PLAYER_PIECE if current_player == 1 else agent.AI_PIECE
+                        col, _ = agent.get_best_move(board, 5, piece)
+                    if col is not None:
+                        # gets the next available row for the chosen column
+                        row = agent.get_next_open_row(board, col) if selected_ai != "Gemini" else next((r for r in range(row_count - 1, -1, -1) if board[r][col] == 0), None)
                         if row is not None:
-                            print("AI suggests for player", current_player, "column", column, "row", row)  # print ai suggestion for debugging
-                            circle_x = column * SQUARESIZE + SQUARESIZE / 2
-                            circle_y = row * SQUARESIZE + SQUARESIZE + SQUARESIZE / 2
-                            pygame.draw.circle(screen, PURPLE, (circle_x, circle_y), RADIUS)
+                            # draws a circle to indicate the AI’s suggestion
+                            pygame.draw.circle(screen, purple, (int(col * squaresize + squaresize / 2), int(row * squaresize + top_bar_height + squaresize / 2)), radius)
                             pygame.display.update()
-                        # if the row is full, skips the ai generation (for the gemini ai)
-                        else:
-                            print("Suggested column", column, "is full. No open row available.")
 
-                # only allow clicks in the grid (not in the top bar)
-                if position_y >= SQUARESIZE:
-                    column = position_x // SQUARESIZE
-                    # when a player clicks a column, it starts from the bottom row
-                    for row in range(ROW_COUNT - 1, -1, -1):
-                        if board[row][column] == 0:  # if slot is empty (0), place a piece
-                            board[row][column] = current_player
+                # processes a click on the board area (below the top bar)
+                if y >= top_bar_height:
+                    col = x // squaresize
+                    # drops the piece in the lowest available row for that column
+                    for row in range(row_count - 1, -1, -1):
+                        if board[row][col] == 0:
+                            board[row][col] = current_player
                             draw_board(board, screen)
-
-                            # if a player gets 4 in a row, the game is over
+                            # checks if the current move wins the game
                             if winning_move(board, current_player):
-                                winner_restart_rect, winner_exit_rect = winner_label(screen, current_player)
+                                font = pygame.font.SysFont("arial", 60)
+                                label = font.render(f"Player {current_player} wins!", True, red if current_player == 1 else yellow)
+                                rect = label.get_rect(center=(width // 2, height // 2))
+                                bg_rect = rect.inflate(20, 20)
+                                pygame.draw.rect(screen, black, bg_rect)
+                                screen.blit(label, rect)
+                                pygame.display.update()
                                 game_over = True
                             else:
-                                if current_player == 1:
-                                    current_player = 2
-                                else:
-                                    current_player = 1
+                                # switches players and update the top bar for the new turn
+                                current_player = 2 if current_player == 1 else 1
                                 restart_button_rect, ai_suggestion_rect, ai_select_rect = top_bar(screen, current_player, selected_ai)
                             break
 
-                # if the game is over, restart and exit buttons are displayed
-                if game_over:
-                    if winner_restart_rect and winner_restart_rect.collidepoint(position_x, position_y):
-                        board = create_board()
-                        draw_board(board, screen)
-                        current_player = 1
-                        restart_button_rect, ai_suggestion_rect, ai_select_rect = top_bar(screen, current_player, selected_ai)
-                        game_over = False
+        # if the game is over, wait 3 seconds and then restart the game
+        if game_over:
+            pygame.time.wait(3000)
+            board = create_board()
+            draw_board(board, screen)
+            current_player = 1
+            game_over = False
+            restart_button_rect, ai_suggestion_rect, ai_select_rect = top_bar(screen, current_player, selected_ai)
 
-                    if winner_exit_rect and winner_exit_rect.collidepoint(position_x, position_y):
-                        running = False
-
-    pygame.quit()
-    sys.exit()
-
+# run the main function if this script is executed directly
 if __name__ == "__main__":
     main()
