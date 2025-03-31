@@ -30,18 +30,22 @@ def winning_move(board, piece):
     ROW_COUNT = len(board)
     COLUMN_COUNT = len(board[0])
 
+    # Check horizontal locations
     for r in range(ROW_COUNT):
         for c in range(COLUMN_COUNT - 3):
             if all(board[r][c + i] == piece for i in range(4)):
                 return True
+    # Check vertical locations
     for c in range(COLUMN_COUNT):
         for r in range(ROW_COUNT - 3):
             if all(board[r + i][c] == piece for i in range(4)):
                 return True
+    # Check positively sloped diagonals
     for r in range(ROW_COUNT - 3):
         for c in range(COLUMN_COUNT - 3):
             if all(board[r + i][c + i] == piece for i in range(4)):
                 return True
+    # Check negatively sloped diagonals
     for r in range(3, ROW_COUNT):
         for c in range(COLUMN_COUNT - 3):
             if all(board[r - i][c + i] == piece for i in range(4)):
@@ -126,7 +130,7 @@ def minimax(board, depth, alpha, beta, maximizing_player, piece):
                 return (None, 0)
         else:  # Depth is zero
             return (None, score_position(board, piece))
-
+    
     # Order moves by center preference for better pruning
     valid_locations.sort(key=lambda x: abs(x - COLUMN_COUNT//2))
     
@@ -135,25 +139,27 @@ def minimax(board, depth, alpha, beta, maximizing_player, piece):
         best_col = random.choice(valid_locations)
         for col in valid_locations:
             row = get_next_open_row(board, col)
-            temp_board = [row[:] for row in board]
+            temp_board = [r[:] for r in board]
             drop_piece(temp_board, row, col, piece)
             new_score = minimax(temp_board, depth-1, alpha, beta, False, piece)[1]
             if new_score > value:
                 value = new_score
                 best_col = col
             alpha = max(alpha, value)
-            if alpha >= beta: # highlight the pruned branches for better understanding
+            if alpha >= beta:
                 minimax.prune_count += 1
                 print(f"Pruned branch (Total prunes: {minimax.prune_count}) | Depth: {depth}, Column: {col}, α: {alpha}, β: {beta}")
                 break
         return best_col, value
-    else:  # Minimizing player
+    else:
         value = math.inf
         best_col = random.choice(valid_locations)
+        # Use the opponent's piece for the minimizing branch.
+        opp_piece = PLAYER_PIECE if piece == AI_PIECE else AI_PIECE
         for col in valid_locations:
             row = get_next_open_row(board, col)
-            temp_board = [row[:] for row in board]
-            drop_piece(temp_board, row, col, piece)
+            temp_board = [r[:] for r in board]
+            drop_piece(temp_board, row, col, opp_piece)
             new_score = minimax(temp_board, depth-1, alpha, beta, True, piece)[1]
             if new_score < value:
                 value = new_score
@@ -171,7 +177,7 @@ def get_best_move(board, depth=5, piece=AI_PIECE):
     # Check for immediate win or block
     for col in valid_locations:
         row = get_next_open_row(board, col)
-        temp_board = [row[:] for row in board]
+        temp_board = [r[:] for r in board]
         drop_piece(temp_board, row, col, piece)
         if winning_move(temp_board, piece):
             return col, PURPLE
@@ -180,7 +186,7 @@ def get_best_move(board, depth=5, piece=AI_PIECE):
     opp_piece = PLAYER_PIECE if piece == AI_PIECE else AI_PIECE
     for col in valid_locations:
         row = get_next_open_row(board, col)
-        temp_board = [row[:] for row in board]
+        temp_board = [r[:] for r in board]
         drop_piece(temp_board, row, col, opp_piece)
         if winning_move(temp_board, opp_piece):
             return col, PURPLE
